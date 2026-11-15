@@ -26,6 +26,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Build debug APK
+        shell: bash
+        run: gradle --no-daemon :app:assembleDebug
+
       - name: Prepare signed APK asset
         shell: bash
         run: |

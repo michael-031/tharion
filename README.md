@@ -20,11 +20,9 @@
 
 ## Download & Install
 
-### Option 1: Install from GitHub Releases (Pre-Built APK)
+### Option 1: Install the Pre-Built APK (Recommended for Users)
 
-> *Note: If no release is published yet under **Releases**, run the included **Actions → Build & Release APK** workflow (no local SDK required) or use **Option 2 (Build from Source)** below.*
-
-1. Open the **Releases** page on the right sidebar (`Releases → Latest`) and download `eltharion-v1.0.0.apk` (or `app-debug.apk`) onto your Android phone (Android 7.0+ / API 24 or higher).
+1. Download **[`eltharion-v1.0.0.apk`](./release/eltharion-v1.0.0.apk)** directly from the [`release/`](./release) folder (or from the repository's **Releases** page on the right sidebar) onto your Android phone (Android 7.0+ / API 24 or higher).
 2. Tap the downloaded `.apk` file in your browser or **Files** app.
 3. If prompted, allow **Install unknown apps** for your browser/file manager, then tap **Install**.
 

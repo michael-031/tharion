@@ -22,17 +22,17 @@
 
 ### Option 1: Install from GitHub Releases (Pre-Built APK)
 
-> *Note: If no release is published yet under the repository's **Releases** sidebar, use **Option 2 (Build from Source)** below or check back after the `v1.0.0` APK is uploaded.*
+> *Note: If no release is published yet under **Releases**, run the included **Actions → Build & Release APK** workflow (no local SDK required) or use **Option 2 (Build from Source)** below.*
 
-1. Open the **Releases** page on the right sidebar (`Releases → Latest`) and download the `.apk` file (`eltharion-v1.0.apk` / `app-debug.apk`) onto your Android phone (Android 7.0+ / API 24 or higher).
+1. Open the **Releases** page on the right sidebar (`Releases → Latest`) and download `eltharion-v1.0.0.apk` (or `app-debug.apk`) onto your Android phone (Android 7.0+ / API 24 or higher).
 2. Tap the downloaded `.apk` file in your browser or **Files** app.
 3. If prompted, allow **Install unknown apps** for your browser/file manager, then tap **Install**.
 
 ### Option 2: Build & Install from Source (Android Studio / Gradle)
 
 #### Prerequisites
-- **Android Studio** (Ladybug or newer) or **Gradle 8+**
-- **JDK 11+** (JDK 17 recommended)
+- **Android Studio** (Ladybug or newer) or **Gradle 9.3.1**
+- **JDK 17+**
 - **Android SDK** with **API Level 36** (`minSdk = 24`, `targetSdk = 36`)
 
 #### Steps
@@ -41,10 +41,13 @@
 git clone https://github.com/<your-username>/<your-repo>.git
 cd <your-repo>
 
-# 2. Run unit & Robolectric tests
+# 2. Decode the debug signing keystore (required once on a fresh clone)
+base64 -d debug.keystore.base64 > debug.keystore
+
+# 3. Run unit & Robolectric tests
 gradle :app:testDebugUnitTest
 
-# 3. Build a debug APK
+# 4. Build the APK
 gradle :app:assembleDebug
 ```
 The compiled APK will be generated at `app/build/outputs/apk/debug/app-debug.apk` (or open the project in Android Studio and click **Run ▶** with USB Debugging enabled).

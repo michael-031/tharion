@@ -20,17 +20,15 @@
 
 ## Download & Install
 
-### Option 1: Install the Pre-Built APK (Recommended for Users)
+### Option 1: Install from GitHub Releases (Pre-Built APK)
 
-1. Open the repository's **Releases** page on GitHub (`Releases → Latest`) and download `eltharion-v1.0.apk` (or `app-release.apk`) onto your Android phone (Android 7.0+ / API 24 or higher).
+> *Note: If no release is published yet under the repository's **Releases** sidebar, use **Option 2 (Build from Source)** below or check back after the `v1.0.0` APK is uploaded.*
+
+1. Open the **Releases** page on the right sidebar (`Releases → Latest`) and download the `.apk` file (`eltharion-v1.0.apk` / `app-debug.apk`) onto your Android phone (Android 7.0+ / API 24 or higher).
 2. Tap the downloaded `.apk` file in your browser or **Files** app.
 3. If prompted, allow **Install unknown apps** for your browser/file manager, then tap **Install**.
-4. Open **Eltharion** and complete quick first-time setup:
-   - Grant **Location** permission (required by Android to read live WiFi SSID and signal strength) and **Notifications** permission (for live guard status & 5-minute expiry alerts).
-   - Tap **Battery Helper** on Home (or in **Settings**) and follow your phone brand's checklist so Android does not pause background monitoring.
-   - *(Optional)* Tap **Settings → Add Quick Tile** to pin Eltharion's Centaur tile into your top Quick Settings panel.
 
-### Option 2: Build & Install from Source (Developers)
+### Option 2: Build & Install from Source (Android Studio / Gradle)
 
 #### Prerequisites
 - **Android Studio** (Ladybug or newer) or **Gradle 8+**
@@ -49,7 +47,12 @@ gradle :app:testDebugUnitTest
 # 3. Build a debug APK
 gradle :app:assembleDebug
 ```
-The compiled APK will be output to `app/build/outputs/apk/debug/app-debug.apk`, or you can click **Run ▶** directly in Android Studio with your Android phone connected via USB Debugging.
+The compiled APK will be generated at `app/build/outputs/apk/debug/app-debug.apk` (or open the project in Android Studio and click **Run ▶** with USB Debugging enabled).
+
+### First-Time Setup on Your Phone
+1. Grant **Location** permission (required by Android to read live WiFi SSID and RSSI) and **Notifications** permission (for guard status & 5-minute expiry alerts).
+2. Open **Battery Helper** on Home (or in **Settings**) and follow your phone brand's checklist so Android does not stop background monitoring.
+3. *(Optional)* Tap **Settings → Add Quick Tile** to pin Eltharion's Centaur tile into your top Quick Settings panel.
 
 ---
 

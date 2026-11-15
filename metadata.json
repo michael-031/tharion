@@ -1,0 +1,6 @@
+{
+  "name": "Eltharion",
+  "description": "Background WiFi RSSI watcher that automatically pauses and resumes LPB Piso WiFi sessions on 10.0.0.1 before signal loss.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

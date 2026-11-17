@@ -1,6 +1,6 @@
 # Eltharion
 
-**Eltharion** is an open-source Android app (Kotlin + Jetpack Compose) that protects your paid **LPB Piso WiFi** (`http://10.0.0.1`) and compatible captive-portal WiFi minutes automatically. It monitors live WiFi signal strength (RSSI) in the background, pauses your session when you walk out of range, alerts you before paused time expires, and tracks every minute saved strictly on your device.
+**Eltharion** is an open-source Android app (Kotlin + Jetpack Compose) that protects your paid **Piso WiFi** (`http://10.0.0.1`) and compatible captive-portal WiFi minutes automatically. It monitors live WiFi signal strength (RSSI) in the background, pauses your session when you walk out of range, alerts you before paused time expires, and tracks every minute saved strictly on your device.
 
 ---
 

@@ -17,15 +17,24 @@ import com.example.R
 import com.example.data.GuardStateBus
 import com.example.data.LogLevel
 import com.example.data.SessionStatus
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 
 class EltharionTileService : TileService() {
+
+    private val tileScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private var telemetryJob: Job? = null
 
     companion object {
         fun requestTileUpdate(context: Context) {
             try {
                 requestListeningState(
-                    context,
-                    ComponentName(context, EltharionTileService::class.java)
+                    context.applicationContext,
+                    ComponentName(context.applicationContext, EltharionTileService::class.java)
                 )
             } catch (_: Exception) {
             }
@@ -41,6 +50,29 @@ class EltharionTileService : TileService() {
     override fun onStartListening() {
         super.onStartListening()
         syncTileState()
+        telemetryJob?.cancel()
+        telemetryJob = tileScope.launch {
+            GuardStateBus.telemetry.collect { telemetry ->
+                applyTileVisuals(
+                    isRunning = telemetry.isGuardRunning,
+                    status = telemetry.sessionStatus,
+                    countdownSeconds = telemetry.pauseCountdownSeconds,
+                    rssiDbm = telemetry.rssiDbm
+                )
+            }
+        }
+    }
+
+    override fun onStopListening() {
+        telemetryJob?.cancel()
+        telemetryJob = null
+        super.onStopListening()
+    }
+
+    override fun onDestroy() {
+        telemetryJob?.cancel()
+        tileScope.cancel()
+        super.onDestroy()
     }
 
     override fun onClick() {

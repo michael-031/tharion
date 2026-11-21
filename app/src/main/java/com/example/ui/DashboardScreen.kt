@@ -37,30 +37,19 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.BatteryChargingFull
-import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DeleteOutline
-import androidx.compose.material.icons.filled.ExpandLess
-import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.HelpOutline
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.HourglassBottom
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Shield
-import androidx.compose.material.icons.filled.ShowChart
 import androidx.compose.material.icons.filled.Timer
-import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.WarningAmber
-import androidx.compose.material.icons.outlined.BookmarkBorder
+import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.HourglassEmpty
-import androidx.compose.material.icons.outlined.ShowChart
-import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -76,8 +65,6 @@ import androidx.compose.material3.NavigationRailItemDefaults
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.minimumInteractiveComponentSize
@@ -107,19 +94,11 @@ import com.example.data.SessionStatus
 import com.example.ui.components.BatteryOptimizationHelperScreen
 import com.example.ui.components.HairlineStatGrid
 import com.example.ui.components.HiddenPortalWebView
-import com.example.ui.components.InsightProgressBarRow
-import com.example.ui.components.MiniRssiTrendChart60s
-import com.example.ui.components.MonthlySavingsTab
 import com.example.ui.components.QuickHelpSheet
-import com.example.ui.components.RssiHistoryLineChart
 import com.example.ui.components.RssiSignalGauge
-import com.example.ui.components.SegmentedPillToggle
-import com.example.ui.components.SignalZoneConcentricRings
-import com.example.ui.components.SimulationBanner
-import com.example.ui.components.SimulationLabCard
+import com.example.ui.components.SettingsScreen
 import com.example.ui.components.StatCell
 import com.example.ui.components.auroraDarkBackdrop
-import com.example.ui.components.dbmToSignalPercent
 import com.example.ui.theme.AbyssBlack
 import com.example.ui.theme.AmberCaution
 import com.example.ui.theme.PureWhite
@@ -138,11 +117,8 @@ private enum class GuardTab(
     val unselectedIcon: ImageVector,
     val tag: String
 ) {
-    GUARD("Home", Icons.Filled.Home, Icons.Outlined.Home, "nav_guard"),
-    SAVINGS("Saved", Icons.Filled.HourglassBottom, Icons.Outlined.HourglassEmpty, "nav_savings"),
-    TELEMETRY("Signal", Icons.Filled.ShowChart, Icons.Outlined.ShowChart, "nav_telemetry"),
-    RULES("Settings", Icons.Filled.Tune, Icons.Outlined.Tune, "nav_rules"),
-    LOGS("History", Icons.Filled.Bookmark, Icons.Outlined.BookmarkBorder, "nav_logs")
+    HOME("Home", Icons.Filled.Home, Icons.Outlined.Home, "nav_guard"),
+    LOGS("Activity", Icons.Filled.History, Icons.Outlined.History, "nav_logs")
 }
 
 @Composable
@@ -166,22 +142,16 @@ fun DashboardScreen(
     onAdjustResumeThreshold: (Int) -> Unit,
     onToggleAutoResume: (Boolean) -> Unit,
     onToggleWebViewFallback: (Boolean) -> Unit,
-    onToggleSimpleMode: (Boolean) -> Unit,
-    onToggleSimulationMode: (Boolean) -> Unit,
-    onSetSimulatedRssi: (Int) -> Unit,
-    onToggleSimulateUnreachable: (Boolean) -> Unit = {},
     onRetryPortalNow: () -> Unit = {},
-    onFastForwardExpiry: () -> Unit,
     onUpdatePortalUrl: (String) -> Unit,
     onUpdateExpiryMinutes: (Int) -> Unit,
-    onClearLogs: () -> Unit,
-    onResetMonthlySavings: () -> Unit
+    onClearLogs: () -> Unit
 ) {
     var selectedTabIndex by rememberSaveable { mutableIntStateOf(0) }
+    var showSettingsScreen by rememberSaveable { mutableStateOf(false) }
     var showPortalConfigDialog by remember { mutableStateOf(false) }
-    var showBackgroundPrioritySheet by remember { mutableStateOf(false) }
+    var showBatteryHelperScreen by rememberSaveable { mutableStateOf(false) }
     var showQuickHelpSheet by remember { mutableStateOf(false) }
-    val isSimpleMode = uiState.settings.simpleModeEnabled
 
     Box(
         modifier = Modifier
@@ -198,7 +168,7 @@ fun DashboardScreen(
                 containerColor = Color.Transparent,
                 contentWindowInsets = WindowInsets.safeDrawing,
                 bottomBar = {
-                    if (!isWide && !isSimpleMode) {
+                    if (!isWide) {
                         MinimalBottomBar(
                             selectedIndex = selectedTabIndex,
                             onSelect = { selectedTabIndex = it }
@@ -211,7 +181,7 @@ fun DashboardScreen(
                         .fillMaxSize()
                         .padding(innerPadding)
                 ) {
-                    if (isWide && !isSimpleMode) {
+                    if (isWide) {
                         NavigationRail(
                             containerColor = AbyssBlack,
                             contentColor = PureWhite
@@ -254,74 +224,24 @@ fun DashboardScreen(
                                 .widthIn(max = 620.dp)
                         ) {
                             AnimatedContent(
-                                targetState = if (isSimpleMode) -1 else selectedTabIndex,
+                                targetState = selectedTabIndex,
                                 transitionSpec = { fadeIn() togetherWith fadeOut() },
                                 label = "tab_content"
                             ) { tabIndex ->
                                 when (tabIndex) {
-                                    -1 -> SimpleModeScreen(
-                                        uiState = uiState,
-                                        onToggleSimpleMode = onToggleSimpleMode,
-                                        onRequestPermissions = onRequestPermissions,
-                                        onOpenSettings = onOpenSettings,
-                                        onPauseResumeClick = {
-                                            if (uiState.telemetry.sessionStatus == SessionStatus.PAUSED) {
-                                                onTestResume()
-                                            } else {
-                                                onTestPause()
-                                            }
-                                        },
-                                        onToggleGuard = {
-                                            if (uiState.telemetry.isGuardRunning) {
-                                                onStopGuard()
-                                            } else {
-                                                onStartGuard()
-                                            }
-                                        }
-                                    )
-
                                     0 -> GuardHomeTab(
                                         uiState = uiState,
-                                        onOpenConfig = { showPortalConfigDialog = true },
-                                        onOpenBackgroundPriority = { showBackgroundPrioritySheet = true },
+                                        onOpenAppSettingsScreen = { showSettingsScreen = true },
+                                        onOpenBatteryHelper = { showBatteryHelperScreen = true },
                                         onOpenQuickHelp = { showQuickHelpSheet = true },
-                                        onToggleSimpleMode = onToggleSimpleMode,
                                         onRequestPermissions = onRequestPermissions,
-                                        onOpenSettings = onOpenSettings,
+                                        onOpenSystemAppSettings = onOpenSettings,
                                         onOpenBatterySettings = onOpenBatterySettings,
                                         onRetryPortalNow = onRetryPortalNow,
                                         onStartGuard = onStartGuard,
                                         onStopGuard = onStopGuard,
                                         onTestPause = onTestPause,
                                         onTestResume = onTestResume
-                                    )
-
-                                    1 -> MonthlySavingsTab(
-                                        uiState = uiState,
-                                        onResetMonthlySavings = onResetMonthlySavings
-                                    )
-
-                                    2 -> TelemetryChartTab(
-                                        uiState = uiState,
-                                        onToggleSimulationMode = onToggleSimulationMode,
-                                        onSetSimulatedRssi = onSetSimulatedRssi,
-                                        onToggleSimulateUnreachable = onToggleSimulateUnreachable,
-                                        onRetryPortalNow = onRetryPortalNow,
-                                        onFastForwardExpiry = onFastForwardExpiry
-                                    )
-
-                                    3 -> RulesInsightsTab(
-                                        uiState = uiState,
-                                        onAdjustPauseThreshold = onAdjustPauseThreshold,
-                                        onSetPauseThreshold = onSetPauseThreshold,
-                                        onAdjustResumeThreshold = onAdjustResumeThreshold,
-                                        onToggleAutoResume = onToggleAutoResume,
-                                        onToggleWebViewFallback = onToggleWebViewFallback,
-                                        onToggleSimpleMode = onToggleSimpleMode,
-                                        onOpenPortalConfig = { showPortalConfigDialog = true },
-                                        onOpenBackgroundPriority = { showBackgroundPrioritySheet = true },
-                                        onOpenBatterySettings = onOpenBatterySettings,
-                                        onAddQuickTile = onAddQuickTile
                                     )
 
                                     else -> ActivityLogsTab(
@@ -338,6 +258,36 @@ fun DashboardScreen(
         }
     }
 
+    if (showSettingsScreen) {
+        SettingsScreen(
+            uiState = uiState,
+            onAdjustPauseThreshold = onAdjustPauseThreshold,
+            onSetPauseThreshold = onSetPauseThreshold,
+            onAdjustResumeThreshold = onAdjustResumeThreshold,
+            onToggleAutoResume = onToggleAutoResume,
+            onToggleWebViewFallback = onToggleWebViewFallback,
+            onOpenPortalConfig = { showPortalConfigDialog = true },
+            onOpenBackgroundPriority = { showBatteryHelperScreen = true },
+            onOpenBatterySettings = onOpenBatterySettings,
+            onAddQuickTile = onAddQuickTile,
+            onBack = { showSettingsScreen = false }
+        )
+    }
+
+    if (showBatteryHelperScreen) {
+        BatteryOptimizationHelperScreen(
+            isBatteryOptimizationIgnored = uiState.isBatteryOptimizationIgnored,
+            hasNotificationPermission = uiState.hasNotificationPermission,
+            hasLocationPermission = uiState.hasLocationPermission,
+            onRefreshStatus = onRefreshPermissions,
+            onOpenBatterySettings = onOpenBatterySettings,
+            onOpenAppSettings = onOpenSettings,
+            onOpenOemAutostart = onOpenOemAutostart,
+            onSendGuideNotification = onSendBatteryGuideNotification,
+            onBack = { showBatteryHelperScreen = false }
+        )
+    }
+
     if (showPortalConfigDialog) {
         PortalConfigDialog(
             currentUrl = uiState.settings.portalBaseUrl,
@@ -351,27 +301,9 @@ fun DashboardScreen(
         )
     }
 
-    if (showBackgroundPrioritySheet) {
-        BatteryOptimizationHelperScreen(
-            isBatteryOptimizationIgnored = uiState.isBatteryOptimizationIgnored,
-            hasNotificationPermission = uiState.hasNotificationPermission,
-            hasLocationPermission = uiState.hasLocationPermission,
-            onRefreshStatus = onRefreshPermissions,
-            onOpenBatterySettings = onOpenBatterySettings,
-            onOpenAppSettings = onOpenSettings,
-            onOpenOemAutostart = onOpenOemAutostart,
-            onSendGuideNotification = onSendBatteryGuideNotification,
-            onBack = { showBackgroundPrioritySheet = false }
-        )
-    }
-
     if (showQuickHelpSheet) {
         QuickHelpSheet(
-            onTryPracticeMode = {
-                onToggleSimulationMode(true)
-                selectedTabIndex = 2
-            },
-            onOpenBackgroundPriority = { showBackgroundPrioritySheet = true },
+            onOpenBackgroundPriority = { showBatteryHelperScreen = true },
             onAddQuickTile = onAddQuickTile,
             onDismiss = { showQuickHelpSheet = false }
         )
@@ -397,264 +329,55 @@ private fun MinimalBottomBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(60.dp)
-                .padding(horizontal = 12.dp),
-            horizontalArrangement = Arrangement.SpaceAround,
+                .height(64.dp)
+                .padding(horizontal = 24.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
         ) {
             GuardTab.entries.forEachIndexed { index, tab ->
                 val selected = index == selectedIndex
-                IconButton(
-                    onClick = { onSelect(index) },
+                Row(
                     modifier = Modifier
-                        .minimumInteractiveComponentSize()
-                        .testTag(tab.tag)
+                        .heightIn(min = 48.dp)
+                        .clip(RoundedCornerShape(999.dp))
+                        .background(if (selected) SlateCardElevated else Color.Transparent)
+                        .border(
+                            width = 1.dp,
+                            color = if (selected) SlateBorder else Color.Transparent,
+                            shape = RoundedCornerShape(999.dp)
+                        )
+                        .clickable { onSelect(index) }
+                        .padding(horizontal = 20.dp, vertical = 10.dp)
+                        .testTag(tab.tag),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Icon(
                         imageVector = if (selected) tab.selectedIcon else tab.unselectedIcon,
                         contentDescription = tab.title,
                         tint = if (selected) PureWhite else TextMuted,
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(21.dp)
                     )
-                }
-            }
-        }
-    }
-}
-
-/**
- * TAB 1: Screen 1 Aesthetic — Circular White Ring Gauge, Circular Guard Toggle Button,
- * 2x2 Hairline Stat Grid, and Pill Action Controls.
- */
-@Composable
-private fun SimpleModeScreen(
-    uiState: GuardUiState,
-    onToggleSimpleMode: (Boolean) -> Unit,
-    onRequestPermissions: () -> Unit,
-    onOpenSettings: () -> Unit,
-    onPauseResumeClick: () -> Unit,
-    onToggleGuard: () -> Unit
-) {
-    val telemetry = uiState.telemetry
-    val status = telemetry.sessionStatus
-    val isPaused = status == SessionStatus.PAUSED
-    val statusColor = when (status) {
-        SessionStatus.ACTIVE -> PureWhite
-        SessionStatus.PAUSED -> AmberCaution
-        SessionStatus.DISCONNECTED -> TextMuted
-    }
-    val statusLabel = when (status) {
-        SessionStatus.ACTIVE -> "TIME RUNNING"
-        SessionStatus.PAUSED -> "TIME PAUSED"
-        SessionStatus.DISCONNECTED -> "NO WIFI"
-    }
-    val countdownStr = if (isPaused && telemetry.pauseCountdownSeconds > 0) {
-        "%02d:%02d left".format(telemetry.pauseCountdownSeconds / 60, telemetry.pauseCountdownSeconds % 60)
-    } else {
-        null
-    }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp, vertical = 14.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.SpaceBetween
-    ) {
-        // Top Header: Status + Simple Mode Toggle
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(
-                modifier = Modifier
-                    .background(SlateCardElevated, RoundedCornerShape(999.dp))
-                    .border(1.dp, SlateBorder, RoundedCornerShape(999.dp))
-                    .padding(horizontal = 12.dp, vertical = 7.dp)
-                    .testTag("simple_connection_status_badge"),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(7.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(8.dp)
-                        .background(statusColor, CircleShape)
-                )
-                Text(
-                    text = statusLabel,
-                    style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 0.8.sp),
-                    color = statusColor,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            SimpleModeToggleChip(
-                enabled = true,
-                onToggle = { onToggleSimpleMode(false) }
-            )
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // App Title & Current Connection Status
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Text(
-                text = stringResource(R.string.app_name),
-                style = MaterialTheme.typography.headlineMedium,
-                color = TextPrimary
-            )
-            Text(
-                text = when {
-                    !telemetry.isWifiConnected -> "Not connected to WiFi"
-                    countdownStr != null -> "${telemetry.ssid} • $countdownStr"
-                    else -> "Connected to ${telemetry.ssid}"
-                },
-                style = MaterialTheme.typography.bodyMedium,
-                color = if (isPaused) AmberCaution else TextSecondary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.testTag("simple_connection_subtitle")
-            )
-        }
-
-        PermissionCallout(
-            visible = !uiState.simulation.enabled && !uiState.hasLocationPermission,
-            hasLocation = uiState.hasLocationPermission,
-            onRequestPermissions = onRequestPermissions,
-            onOpenSettings = onOpenSettings
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // Large Signal Strength Indicator
-        RssiSignalGauge(
-            rssiDbm = telemetry.rssiDbm,
-            isWifiConnected = telemetry.isWifiConnected,
-            pauseThresholdDbm = uiState.settings.pauseThresholdDbm,
-            pauseStrikes = telemetry.pauseStrikes,
-            resumeStrikes = telemetry.resumeStrikes,
-            gaugeSize = 264.dp,
-            modifier = Modifier.testTag("simple_signal_gauge")
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Prominent Pause / Resume Primary Action + Secondary Auto-Guard Toggle
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .widthIn(max = 380.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Button(
-                onClick = onPauseResumeClick,
-                enabled = !telemetry.isExecutingPortalCommand,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = PureWhite,
-                    contentColor = AbyssBlack
-                ),
-                shape = RoundedCornerShape(999.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(64.dp)
-                    .testTag("simple_pause_resume_button")
-            ) {
-                if (telemetry.isExecutingPortalCommand) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
-                        strokeWidth = 2.5.dp,
-                        color = AbyssBlack
-                    )
-                } else {
-                    Icon(
-                        imageVector = if (isPaused) Icons.Default.PlayArrow else Icons.Default.Pause,
-                        contentDescription = null,
-                        modifier = Modifier.size(24.dp)
-                    )
-                    Spacer(modifier = Modifier.width(10.dp))
                     Text(
-                        text = if (isPaused) "Resume WiFi Time" else "Pause WiFi Time",
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                        text = tab.title,
+                        style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp),
+                        color = if (selected) PureWhite else TextMuted,
+                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
                     )
                 }
             }
-
-            OutlinedButton(
-                onClick = onToggleGuard,
-                border = BorderStroke(
-                    1.dp,
-                    if (telemetry.isGuardRunning) PureWhite.copy(alpha = 0.7f) else SlateBorder
-                ),
-                shape = RoundedCornerShape(999.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 48.dp)
-                    .testTag("simple_auto_guard_button")
-            ) {
-                Icon(
-                    imageVector = if (telemetry.isGuardRunning) Icons.Default.Check else Icons.Default.Shield,
-                    contentDescription = null,
-                    tint = PureWhite,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = if (telemetry.isGuardRunning) "Auto-Pause Protection: ON" else "Turn On Auto-Pause",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = PureWhite
-                )
-            }
         }
-
-        Spacer(modifier = Modifier.height(12.dp))
     }
 }
 
-@Composable
-private fun SimpleModeToggleChip(
-    enabled: Boolean,
-    onToggle: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .heightIn(min = 48.dp)
-            .clip(RoundedCornerShape(999.dp))
-            .background(if (enabled) PureWhite else SlateCardElevated)
-            .border(1.dp, if (enabled) PureWhite else SlateBorder, RoundedCornerShape(999.dp))
-            .clickable(onClick = onToggle)
-            .padding(horizontal = 12.dp, vertical = 8.dp)
-            .testTag("simple_mode_toggle"),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(5.dp)
-    ) {
-        Text(
-            text = if (enabled) "Simple: ON" else "Simple",
-            style = MaterialTheme.typography.labelSmall,
-            color = if (enabled) AbyssBlack else TextPrimary,
-            fontWeight = FontWeight.Bold
-        )
-    }
-}
-
-/**
- * TAB 1: Screen 1 Aesthetic — Circular White Ring Gauge, Circular Guard Toggle Button,
- * 2x2 Hairline Stat Grid, and Pill Action Controls.
- */
 @Composable
 private fun GuardHomeTab(
     uiState: GuardUiState,
-    onOpenConfig: () -> Unit,
-    onOpenBackgroundPriority: () -> Unit,
+    onOpenAppSettingsScreen: () -> Unit,
+    onOpenBatteryHelper: () -> Unit,
     onOpenQuickHelp: () -> Unit,
-    onToggleSimpleMode: (Boolean) -> Unit,
     onRequestPermissions: () -> Unit,
-    onOpenSettings: () -> Unit,
+    onOpenSystemAppSettings: () -> Unit,
     onOpenBatterySettings: () -> Unit,
     onRetryPortalNow: () -> Unit,
     onStartGuard: () -> Unit,
@@ -689,7 +412,7 @@ private fun GuardHomeTab(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
-        // Top minimal header matching Screen 1 (status badge + Simple + Help + Priority + settings)
+        // Clean header: Session Status pill + Help & Settings buttons
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
@@ -719,13 +442,8 @@ private fun GuardHomeTab(
 
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                SimpleModeToggleChip(
-                    enabled = false,
-                    onToggle = { onToggleSimpleMode(true) }
-                )
-
                 IconButton(
                     onClick = onOpenQuickHelp,
                     modifier = Modifier
@@ -743,7 +461,7 @@ private fun GuardHomeTab(
                 }
 
                 IconButton(
-                    onClick = onOpenConfig,
+                    onClick = onOpenAppSettingsScreen,
                     modifier = Modifier
                         .minimumInteractiveComponentSize()
                         .background(SlateCardElevated, CircleShape)
@@ -752,7 +470,7 @@ private fun GuardHomeTab(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Settings,
-                        contentDescription = "Portal Settings",
+                        contentDescription = "Settings",
                         tint = TextPrimary,
                         modifier = Modifier.size(19.dp)
                     )
@@ -781,18 +499,16 @@ private fun GuardHomeTab(
             )
         }
 
-        SimulationBanner(visible = uiState.simulation.enabled)
-
         PermissionCallout(
-            visible = !uiState.simulation.enabled && (!uiState.hasLocationPermission || !uiState.hasNotificationPermission),
+            visible = !uiState.hasLocationPermission || !uiState.hasNotificationPermission,
             hasLocation = uiState.hasLocationPermission,
             onRequestPermissions = onRequestPermissions,
-            onOpenSettings = onOpenSettings
+            onOpenSettings = onOpenSystemAppSettings
         )
 
         BatteryOptimizationBanner(
             visible = !uiState.isBatteryOptimizationIgnored,
-            onOpenBackgroundPriority = onOpenBackgroundPriority,
+            onOpenBackgroundPriority = onOpenBatteryHelper,
             onOpenBatterySettings = onOpenBatterySettings
         )
 
@@ -805,7 +521,7 @@ private fun GuardHomeTab(
 
         PauseCountdownCard(uiState = uiState)
 
-        // Hero Circular Ring Gauge (Screen 1)
+        // Hero Circular Signal Strength Ring
         RssiSignalGauge(
             rssiDbm = telemetry.rssiDbm,
             isWifiConnected = telemetry.isWifiConnected,
@@ -814,7 +530,7 @@ private fun GuardHomeTab(
             resumeStrikes = telemetry.resumeStrikes
         )
 
-        // Circular Toggle Button matching Screen 1's "Done" button
+        // Main Auto-Pause Toggle Button
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(6.dp)
@@ -848,7 +564,7 @@ private fun GuardHomeTab(
             )
         }
 
-        // 2x2 Hairline Stat Grid (Screen 2 style)
+        // Compact 2x2 Status Grid
         val countdownStr = if (telemetry.sessionStatus == SessionStatus.PAUSED && telemetry.pauseCountdownSeconds > 0) {
             "%02d:%02d".format(telemetry.pauseCountdownSeconds / 60, telemetry.pauseCountdownSeconds % 60)
         } else {
@@ -874,738 +590,77 @@ private fun GuardHomeTab(
             )
         )
 
-        // Compact 60-second RSSI trend line chart (local device memory only)
-        MiniRssiTrendChart60s(
-            samples = telemetry.rssiSamples,
-            pauseThresholdDbm = uiState.settings.pauseThresholdDbm
-        )
-
-        // Manual Pause / Resume Monochrome Pill Buttons
-        Row(
+        // Manual Pause / Resume Controls (only active when connected to WiFi and Protection is ON)
+        val canUseManualControls = telemetry.isWifiConnected && isRunning && !telemetry.isExecutingPortalCommand
+        Column(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            Button(
-                onClick = onTestPause,
-                enabled = !telemetry.isExecutingPortalCommand,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = PureWhite,
-                    contentColor = AbyssBlack
-                ),
-                shape = RoundedCornerShape(999.dp),
-                modifier = Modifier
-                    .weight(1f)
-                    .height(48.dp)
-                    .testTag("test_pause_button")
-            ) {
-                if (telemetry.isExecutingPortalCommand) {
-                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = AbyssBlack)
-                } else {
-                    Icon(Icons.Default.Pause, contentDescription = null, modifier = Modifier.size(17.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(stringResource(R.string.test_pause), style = MaterialTheme.typography.labelLarge)
-                }
-            }
-
-            OutlinedButton(
-                onClick = onTestResume,
-                enabled = !telemetry.isExecutingPortalCommand,
-                border = BorderStroke(1.dp, SlateBorder),
-                shape = RoundedCornerShape(999.dp),
-                modifier = Modifier
-                    .weight(1f)
-                    .height(48.dp)
-                    .testTag("test_resume_button")
-            ) {
-                Icon(Icons.Default.PlayArrow, contentDescription = null, tint = PureWhite, modifier = Modifier.size(17.dp))
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(stringResource(R.string.test_resume), style = MaterialTheme.typography.labelLarge, color = PureWhite)
-            }
-        }
-
-        Spacer(modifier = Modifier.height(6.dp))
-    }
-}
-
-/**
- * TAB 2: Screen 2 Aesthetic — Segmented Pill ("Live | Practice"),
- * Line Chart with White Floating Tooltip, 2x2 Hairline Stat Grid, and Practice Controls.
- */
-@Composable
-private fun TelemetryChartTab(
-    uiState: GuardUiState,
-    onToggleSimulationMode: (Boolean) -> Unit,
-    onSetSimulatedRssi: (Int) -> Unit,
-    onToggleSimulateUnreachable: (Boolean) -> Unit,
-    onRetryPortalNow: () -> Unit,
-    onFastForwardExpiry: () -> Unit
-) {
-    val selectedSegment = if (uiState.simulation.enabled) 1 else 0
-    val history = uiState.telemetry.rssiHistory
-    val avgPct = if (history.isNotEmpty()) "${dbmToSignalPercent(history.average().toInt())}%" else "--"
-    val minPct = if (history.isNotEmpty()) "${dbmToSignalPercent(history.min())}%" else "--"
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp, vertical = 14.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(18.dp)
-    ) {
-        SegmentedPillToggle(
-            options = listOf("Live", "Practice"),
-            selectedIndex = selectedSegment,
-            onSelect = { idx -> onToggleSimulationMode(idx == 1) }
-        )
-
-        SmartRetryBanner(
-            retryAttempt = uiState.telemetry.portalRetryAttempt,
-            nextRetrySeconds = uiState.telemetry.portalNextRetrySeconds,
-            portalUrl = uiState.settings.portalBaseUrl,
-            onRetryNow = onRetryPortalNow
-        )
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = if (uiState.simulation.enabled) "Practice Signal" else "Live Signal",
-                style = MaterialTheme.typography.titleLarge,
-                color = TextPrimary
-            )
-            Text(
-                text = if (uiState.telemetry.isWifiConnected) "Updates every 2s" else "Waiting for WiFi",
-                style = MaterialTheme.typography.labelSmall,
-                color = TextMuted
-            )
-        }
-
-        RssiHistoryLineChart(
-            history = history,
-            pauseThresholdDbm = uiState.settings.pauseThresholdDbm
-        )
-
-        HairlineStatGrid(
-            topLeft = StatCell(value = avgPct, caption = "Avg Signal"),
-            topRight = StatCell(value = minPct, caption = "Weakest"),
-            bottomLeft = StatCell(value = "${uiState.telemetry.pauseStrikes}/2", caption = "Pause Checks"),
-            bottomRight = StatCell(value = "${uiState.telemetry.resumeStrikes}/2", caption = "Resume Checks")
-        )
-
-        SimulationLabCard(
-            simulation = uiState.simulation,
-            sessionStatus = uiState.telemetry.sessionStatus,
-            pauseThresholdDbm = uiState.settings.pauseThresholdDbm,
-            onToggleSimulation = onToggleSimulationMode,
-            onSetSimulatedRssi = onSetSimulatedRssi,
-            onToggleSimulateUnreachable = onToggleSimulateUnreachable,
-            onFastForwardExpiry = onFastForwardExpiry
-        )
-
-        Spacer(modifier = Modifier.height(6.dp))
-    }
-}
-
-/**
- * TAB 3: Screen 3 Aesthetic — Concentric 3-Ring Signal Zone Distribution +
- * Insight Horizontal Bars & Automation Controls.
- */
-@Composable
-private fun RulesInsightsTab(
-    uiState: GuardUiState,
-    onAdjustPauseThreshold: (Int) -> Unit,
-    onSetPauseThreshold: (Int) -> Unit,
-    onAdjustResumeThreshold: (Int) -> Unit,
-    onToggleAutoResume: (Boolean) -> Unit,
-    onToggleWebViewFallback: (Boolean) -> Unit,
-    onToggleSimpleMode: (Boolean) -> Unit,
-    onOpenPortalConfig: () -> Unit,
-    onOpenBackgroundPriority: () -> Unit,
-    onOpenBatterySettings: () -> Unit,
-    onAddQuickTile: () -> Unit
-) {
-    val settings = uiState.settings
-    val pauseFraction = ((settings.pauseThresholdDbm + 95f) / 50f).coerceIn(0.1f, 0.95f)
-    val resumeFraction = ((settings.resumeThresholdDbm + 95f) / 50f).coerceIn(0.1f, 0.95f)
-    var showAdvancedSettings by remember { mutableStateOf(false) }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp, vertical = 14.dp),
-        verticalArrangement = Arrangement.spacedBy(18.dp)
-    ) {
-        // Simple Mode Toggle Card
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(14.dp))
-                .background(SlateCardElevated)
-                .border(1.dp, SlateBorder, RoundedCornerShape(14.dp))
-                .padding(horizontal = 14.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "Simple Mode",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = TextPrimary
-                )
-                Text(
-                    text = "Hide charts, logs & settings—show only Pause/Resume and signal",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = TextSecondary
-                )
-            }
-            Switch(
-                checked = settings.simpleModeEnabled,
-                onCheckedChange = onToggleSimpleMode,
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = AbyssBlack,
-                    checkedTrackColor = PureWhite,
-                    uncheckedThumbColor = TextSecondary,
-                    uncheckedTrackColor = SlateCard
-                ),
-                modifier = Modifier.testTag("settings_simple_mode_switch")
-            )
-        }
-
-        // Quick Settings Tile Card (one-tap toggle from Android top shade)
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(14.dp))
-                .background(SlateCardElevated)
-                .border(1.dp, SlateBorder, RoundedCornerShape(14.dp))
-                .padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            Text(
-                text = stringResource(R.string.quick_tile_card_title),
-                style = MaterialTheme.typography.titleMedium,
-                color = TextPrimary
-            )
-            Text(
-                text = stringResource(R.string.quick_tile_card_desc),
-                style = MaterialTheme.typography.bodyMedium,
-                color = TextSecondary
-            )
-            Button(
-                onClick = onAddQuickTile,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = PureWhite,
-                    contentColor = AbyssBlack
-                ),
-                shape = RoundedCornerShape(999.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 48.dp)
-                    .testTag("add_quick_tile_button")
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Shield,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = stringResource(R.string.quick_tile_add_button),
-                    style = MaterialTheme.typography.labelLarge
-                )
-            }
-        }
-
-        Text(
-            text = "Signal Summary",
-            style = MaterialTheme.typography.titleLarge,
-            color = TextPrimary
-        )
-
-        SignalZoneConcentricRings(
-            history = uiState.telemetry.rssiHistory,
-            pauseThresholdDbm = settings.pauseThresholdDbm
-        )
-
-        HorizontalDivider(color = SlateBorder, thickness = 1.dp)
-
-        Text(
-            text = stringResource(R.string.threshold_title),
-            style = MaterialTheme.typography.titleLarge,
-            color = TextPrimary
-        )
-
-        // One-Tap Distance Presets for non-tech-savvy users
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(
-                text = "Pick how far you can walk before WiFi pauses automatically:",
-                style = MaterialTheme.typography.bodyMedium,
-                color = TextSecondary
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                DistancePresetChip(
-                    label = "Close",
-                    sublabel = "Short range",
-                    selected = settings.pauseThresholdDbm >= -70,
-                    onClick = { onSetPauseThreshold(-68) },
-                    modifier = Modifier
-                        .weight(1f)
-                        .testTag("preset_distance_close")
-                )
-                DistancePresetChip(
-                    label = "Balanced",
-                    sublabel = "Recommended",
-                    selected = settings.pauseThresholdDbm in -78..-71,
-                    onClick = { onSetPauseThreshold(-75) },
-                    modifier = Modifier
-                        .weight(1f)
-                        .testTag("preset_distance_balanced")
-                )
-                DistancePresetChip(
-                    label = "Far",
-                    sublabel = "Max range",
-                    selected = settings.pauseThresholdDbm <= -79,
-                    onClick = { onSetPauseThreshold(-82) },
-                    modifier = Modifier
-                        .weight(1f)
-                        .testTag("preset_distance_far")
-                )
-            }
-        }
-
-        // Fine adjustment row
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            InsightProgressBarRow(
-                title = "Pause Trigger (${dbmToSignalPercent(settings.pauseThresholdDbm)}% • ${settings.pauseThresholdDbm} dBm)",
-                leftCaption = "Far away (-90 dBm)",
-                rightCaption = "Very close (-50 dBm)",
-                fraction = pauseFraction
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Fine-tune distance",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = TextSecondary
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    IconButton(
-                        onClick = { onAdjustPauseThreshold(-2) },
-                        modifier = Modifier
-                            .minimumInteractiveComponentSize()
-                            .background(SlateCardElevated, CircleShape)
-                            .border(1.dp, SlateBorder, CircleShape)
-                            .testTag("threshold_minus_button")
-                    ) {
-                        Icon(Icons.Default.Remove, "Allow farther distance", tint = PureWhite)
-                    }
-                    IconButton(
-                        onClick = { onAdjustPauseThreshold(+2) },
-                        modifier = Modifier
-                            .minimumInteractiveComponentSize()
-                            .background(SlateCardElevated, CircleShape)
-                            .border(1.dp, SlateBorder, CircleShape)
-                            .testTag("threshold_plus_button")
-                    ) {
-                        Icon(Icons.Default.Add, "Pause sooner", tint = PureWhite)
-                    }
-                }
-            }
-        }
-
-        HorizontalDivider(color = SlateBorder, thickness = 1.dp)
-
-        // Auto-Resume Row
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = stringResource(R.string.auto_resume_label),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = TextPrimary
-                    )
-                    Text(
-                        text = stringResource(R.string.auto_resume_desc, settings.resumeThresholdDbm),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = TextSecondary
-                    )
-                }
-                Switch(
-                    checked = settings.autoResumeEnabled,
-                    onCheckedChange = onToggleAutoResume,
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = AbyssBlack,
-                        checkedTrackColor = PureWhite,
-                        uncheckedThumbColor = TextSecondary,
-                        uncheckedTrackColor = SlateCardElevated
-                    ),
-                    modifier = Modifier.testTag("auto_resume_switch")
-                )
-            }
-
-            AnimatedVisibility(visible = settings.autoResumeEnabled) {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    InsightProgressBarRow(
-                        title = "Resume Signal (${dbmToSignalPercent(settings.resumeThresholdDbm)}% • ${settings.resumeThresholdDbm} dBm)",
-                        leftCaption = "Weak (-80 dBm)",
-                        rightCaption = "Very strong (-40 dBm)",
-                        fraction = resumeFraction
-                    )
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.End,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        IconButton(
-                            onClick = { onAdjustResumeThreshold(-2) },
-                            modifier = Modifier
-                                .minimumInteractiveComponentSize()
-                                .background(SlateCardElevated, CircleShape)
-                                .border(1.dp, SlateBorder, CircleShape)
-                                .testTag("resume_threshold_minus")
-                        ) {
-                            Icon(Icons.Default.Remove, "Decrease Resume Threshold", tint = PureWhite)
-                        }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        IconButton(
-                            onClick = { onAdjustResumeThreshold(+2) },
-                            modifier = Modifier
-                                .minimumInteractiveComponentSize()
-                                .background(SlateCardElevated, CircleShape)
-                                .border(1.dp, SlateBorder, CircleShape)
-                                .testTag("resume_threshold_plus")
-                        ) {
-                            Icon(Icons.Default.Add, "Increase Resume Threshold", tint = PureWhite)
-                        }
-                    }
-                }
-            }
-        }
-
-        HorizontalDivider(color = SlateBorder, thickness = 1.dp)
-
-        // Collapsible Advanced Portal Settings so casual users aren't overwhelmed
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(14.dp))
-                .background(SlateCardElevated)
-                .border(1.dp, SlateBorder, RoundedCornerShape(14.dp))
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { showAdvancedSettings = !showAdvancedSettings }
-                    .minimumInteractiveComponentSize()
-                    .padding(horizontal = 14.dp, vertical = 12.dp)
-                    .testTag("advanced_portal_toggle"),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "Advanced Portal Settings",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = TextPrimary
-                    )
-                    Text(
-                        text = "${settings.portalBaseUrl} • Expiry ${settings.pauseExpiryMinutes}m",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = TextMuted
-                    )
-                }
-                Icon(
-                    imageVector = if (showAdvancedSettings) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                    contentDescription = if (showAdvancedSettings) "Hide Advanced Settings" else "Show Advanced Settings",
-                    tint = TextSecondary
-                )
-            }
-
-            AnimatedVisibility(visible = showAdvancedSettings) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 14.dp)
-                        .padding(bottom = 14.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    HorizontalDivider(color = SlateBorder, thickness = 1.dp)
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Backup Portal Clicker",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = TextPrimary
-                            )
-                            Text(
-                                text = "Uses a hidden browser fallback if your Piso WiFi uses a custom page",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = TextSecondary
-                            )
-                        }
-                        Switch(
-                            checked = settings.useWebViewFallback,
-                            onCheckedChange = onToggleWebViewFallback,
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = AbyssBlack,
-                                checkedTrackColor = PureWhite,
-                                uncheckedThumbColor = TextSecondary,
-                                uncheckedTrackColor = SlateCard
-                            ),
-                            modifier = Modifier.testTag("webview_fallback_switch")
-                        )
-                    }
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(SlateCard)
-                            .border(1.dp, SlateBorder, RoundedCornerShape(12.dp))
-                            .clickable(onClick = onOpenPortalConfig)
-                            .minimumInteractiveComponentSize()
-                            .padding(horizontal = 14.dp, vertical = 12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
-                            Text(
-                                text = "Piso WiFi Portal Address",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = TextMuted
-                            )
-                            Text(
-                                text = settings.portalBaseUrl,
-                                style = MaterialTheme.typography.labelMedium,
-                                color = PureWhite
-                            )
-                        }
-                        Text(
-                            text = "Edit",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = PureWhite
-                        )
-                    }
-                }
-            }
-        }
-
-        HorizontalDivider(color = SlateBorder, thickness = 1.dp)
-
-        // Background Reliability & Battery Optimization Guide
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(14.dp))
-                .background(SlateCard)
-                .border(1.dp, SlateBorder, RoundedCornerShape(14.dp))
-                .clickable(onClick = onOpenBackgroundPriority)
-                .padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = stringResource(R.string.bg_priority_title),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = TextPrimary
-                )
-                Text(
-                    text = if (uiState.isBatteryOptimizationIgnored) {
-                        stringResource(R.string.bg_priority_status_unrestricted)
-                    } else {
-                        stringResource(R.string.bg_priority_status_optimized)
-                    },
-                    style = MaterialTheme.typography.labelSmall,
-                    color = if (uiState.isBatteryOptimizationIgnored) PureWhite else AmberCaution,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-            Text(
-                text = if (uiState.isBatteryOptimizationIgnored) {
-                    "Battery optimization is disabled for Eltharion. Background RSSI monitoring stays active."
-                } else {
-                    "Set Eltharion to Unrestricted in Android Battery settings so the OS doesn't pause RSSI checks."
-                },
-                style = MaterialTheme.typography.bodyMedium,
-                color = TextSecondary
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                OutlinedButton(
-                    onClick = onOpenBackgroundPriority,
-                    border = BorderStroke(1.dp, SlateBorder),
-                    shape = RoundedCornerShape(999.dp),
-                    modifier = Modifier
-                        .weight(1f)
-                        .heightIn(min = 48.dp)
-                        .testTag("rules_open_background_priority_button")
-                ) {
-                    Text(
-                        text = "Battery Helper",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = PureWhite
-                    )
-                }
-                Button(
-                    onClick = onOpenBatterySettings,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = PureWhite,
-                        contentColor = AbyssBlack
-                    ),
-                    shape = RoundedCornerShape(999.dp),
-                    modifier = Modifier
-                        .weight(1f)
-                        .heightIn(min = 48.dp)
-                        .testTag("open_battery_settings_button")
-                ) {
-                    Text(
-                        text = "Battery Settings",
-                        style = MaterialTheme.typography.labelLarge
-                    )
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(6.dp))
-    }
-}
-
-@Composable
-private fun BatteryOptimizationBanner(
-    visible: Boolean,
-    onOpenBackgroundPriority: () -> Unit,
-    onOpenBatterySettings: () -> Unit
-) {
-    AnimatedVisibility(
-        visible = visible,
-        enter = fadeIn() + expandVertically(),
-        exit = fadeOut() + shrinkVertically()
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(14.dp))
-                .background(SlateCard)
-                .border(1.dp, SlateBorder, RoundedCornerShape(14.dp))
-                .clickable(onClick = onOpenBackgroundPriority)
-                .padding(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Text(
-                    text = "Background Priority Needed",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = TextPrimary
-                )
-                Text(
-                    text = "RECOMMENDED",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = AmberCaution
-                )
-            }
-            Text(
-                text = "Disable battery optimization for Eltharion so background WiFi monitoring stays persistent.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = TextSecondary
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(
-                    onClick = onOpenBackgroundPriority,
-                    border = BorderStroke(1.dp, SlateBorder),
-                    shape = RoundedCornerShape(999.dp),
-                    modifier = Modifier
-                        .weight(1f)
-                        .heightIn(min = 48.dp)
-                        .testTag("home_open_background_priority_button")
-                ) {
-                    Text("Battery Helper", style = MaterialTheme.typography.labelMedium, color = PureWhite)
-                }
                 Button(
-                    onClick = onOpenBatterySettings,
+                    onClick = onTestPause,
+                    enabled = canUseManualControls,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = PureWhite,
-                        contentColor = AbyssBlack
+                        contentColor = AbyssBlack,
+                        disabledContainerColor = SlateCardElevated,
+                        disabledContentColor = TextMuted
                     ),
                     shape = RoundedCornerShape(999.dp),
                     modifier = Modifier
                         .weight(1f)
-                        .heightIn(min = 48.dp)
-                        .testTag("home_open_battery_settings_button")
+                        .height(48.dp)
+                        .testTag("test_pause_button")
                 ) {
-                    Text("Battery Settings", style = MaterialTheme.typography.labelMedium)
+                    if (telemetry.isExecutingPortalCommand) {
+                        CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = AbyssBlack)
+                    } else {
+                        Icon(Icons.Default.Pause, contentDescription = null, modifier = Modifier.size(17.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(stringResource(R.string.test_pause), style = MaterialTheme.typography.labelLarge)
+                    }
+                }
+
+                OutlinedButton(
+                    onClick = onTestResume,
+                    enabled = canUseManualControls,
+                    border = BorderStroke(
+                        1.dp,
+                        if (canUseManualControls) SlateBorder else SlateBorder.copy(alpha = 0.45f)
+                    ),
+                    shape = RoundedCornerShape(999.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(48.dp)
+                        .testTag("test_resume_button")
+                ) {
+                    val resumeTint = if (canUseManualControls) PureWhite else TextMuted
+                    Icon(Icons.Default.PlayArrow, contentDescription = null, tint = resumeTint, modifier = Modifier.size(17.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(stringResource(R.string.test_resume), style = MaterialTheme.typography.labelLarge, color = resumeTint)
                 }
             }
+
+            if (!telemetry.isWifiConnected || !isRunning) {
+                Text(
+                    text = when {
+                        !telemetry.isWifiConnected -> "Connect to WiFi and turn on Protection to pause or resume"
+                        else -> "Turn on Protection above to enable Pause & Resume"
+                    },
+                    style = MaterialTheme.typography.labelSmall,
+                    color = TextMuted
+                )
+            }
         }
+
+        Spacer(modifier = Modifier.height(6.dp))
     }
 }
 
-@Composable
-private fun DistancePresetChip(
-    label: String,
-    sublabel: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Column(
-        modifier = modifier
-            .heightIn(min = 56.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(if (selected) PureWhite else SlateCardElevated)
-            .border(1.dp, if (selected) PureWhite else SlateBorder, RoundedCornerShape(12.dp))
-            .clickable(onClick = onClick)
-            .padding(horizontal = 10.dp, vertical = 8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelLarge,
-            color = if (selected) AbyssBlack else TextPrimary,
-            fontWeight = FontWeight.Bold
-        )
-        Text(
-            text = sublabel,
-            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-            color = if (selected) SlateCard else TextMuted,
-            maxLines = 1
-        )
-    }
-}
-
-/**
- * TAB 4: Clean Monochrome Activity History
- */
 @Composable
 private fun ActivityLogsTab(
     logs: List<ActivityLogEntry>,
@@ -1702,6 +757,79 @@ private fun ActivityLogsTab(
                         }
                         HorizontalDivider(color = SlateBorder.copy(alpha = 0.45f), thickness = 1.dp)
                     }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun BatteryOptimizationBanner(
+    visible: Boolean,
+    onOpenBackgroundPriority: () -> Unit,
+    onOpenBatterySettings: () -> Unit
+) {
+    AnimatedVisibility(
+        visible = visible,
+        enter = fadeIn() + expandVertically(),
+        exit = fadeOut() + shrinkVertically()
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(14.dp))
+                .background(SlateCard)
+                .border(1.dp, SlateBorder, RoundedCornerShape(14.dp))
+                .clickable(onClick = onOpenBackgroundPriority)
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Background Priority Needed",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = TextPrimary
+                )
+                Text(
+                    text = "RECOMMENDED",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = AmberCaution
+                )
+            }
+            Text(
+                text = "Disable battery optimization for Eltharion so background WiFi monitoring stays persistent.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = TextSecondary
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(
+                    onClick = onOpenBackgroundPriority,
+                    border = BorderStroke(1.dp, SlateBorder),
+                    shape = RoundedCornerShape(999.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .heightIn(min = 48.dp)
+                        .testTag("home_open_background_priority_button")
+                ) {
+                    Text("Battery Helper", style = MaterialTheme.typography.labelMedium, color = PureWhite)
+                }
+                Button(
+                    onClick = onOpenBatterySettings,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = PureWhite,
+                        contentColor = AbyssBlack
+                    ),
+                    shape = RoundedCornerShape(999.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .heightIn(min = 48.dp)
+                        .testTag("home_open_battery_settings_button")
+                ) {
+                    Text("Battery Settings", style = MaterialTheme.typography.labelMedium)
                 }
             }
         }
@@ -1885,7 +1013,7 @@ private fun PortalConfigDialog(
                 OutlinedTextField(
                     value = urlInput,
                     onValueChange = { urlInput = it },
-                    label = { Text("LPB Portal Gateway URL") },
+                    label = { Text("Piso WiFi Portal URL") },
                     placeholder = { Text("http://10.0.0.1") },
                     singleLine = true,
                     modifier = Modifier
@@ -1897,6 +1025,13 @@ private fun PortalConfigDialog(
                     onValueChange = { txt -> minutesInput = txt.filter { it.isDigit() } },
                     label = { Text("Pause Expiry Limit (Minutes)") },
                     placeholder = { Text("60") },
+                    supportingText = {
+                        Text(
+                            text = "Matches your Piso WiFi vendo's max pause duration. Eltharion warns you 5 min before paused time expires.",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = TextSecondary
+                        )
+                    },
                     singleLine = true,
                     modifier = Modifier
                         .fillMaxWidth()

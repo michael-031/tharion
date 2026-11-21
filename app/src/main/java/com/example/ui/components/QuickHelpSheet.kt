@@ -23,7 +23,6 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.HelpOutline
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.PauseCircle
-import androidx.compose.material.icons.filled.Science
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.Button
@@ -58,7 +57,6 @@ import com.example.ui.theme.TextSecondary
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun QuickHelpSheet(
-    onTryPracticeMode: () -> Unit,
     onOpenBackgroundPriority: () -> Unit,
     onAddQuickTile: () -> Unit,
     onDismiss: () -> Unit
@@ -115,7 +113,7 @@ fun QuickHelpSheet(
                             color = TextPrimary
                         )
                         Text(
-                            text = "Save your Piso WiFi time automatically",
+                            text = "Auto-pause your Piso WiFi time when you leave",
                             style = MaterialTheme.typography.bodyMedium,
                             color = TextSecondary
                         )
@@ -174,25 +172,6 @@ fun QuickHelpSheet(
                 )
             }
 
-            OutlinedButton(
-                onClick = {
-                    onDismiss()
-                    onAddQuickTile()
-                },
-                border = BorderStroke(1.dp, SlateBorder),
-                shape = RoundedCornerShape(999.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 48.dp)
-                    .testTag("quick_help_add_tile_button")
-            ) {
-                Text(
-                    text = "Add Quick Settings Tile (Top Shade)",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = PureWhite
-                )
-            }
-
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -210,7 +189,7 @@ fun QuickHelpSheet(
                         .testTag("quick_help_priority_button")
                 ) {
                     Text(
-                        text = "Battery Setup",
+                        text = "Battery Helper",
                         style = MaterialTheme.typography.labelLarge,
                         color = PureWhite
                     )
@@ -219,7 +198,7 @@ fun QuickHelpSheet(
                 Button(
                     onClick = {
                         onDismiss()
-                        onTryPracticeMode()
+                        onAddQuickTile()
                     },
                     colors = ButtonDefaults.buttonColors(
                         containerColor = PureWhite,
@@ -229,16 +208,10 @@ fun QuickHelpSheet(
                     modifier = Modifier
                         .weight(1f)
                         .heightIn(min = 48.dp)
-                        .testTag("quick_help_practice_button")
+                        .testTag("quick_help_add_tile_button")
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Science,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "Try Practice",
+                        text = "Add Quick Tile",
                         style = MaterialTheme.typography.labelLarge
                     )
                 }

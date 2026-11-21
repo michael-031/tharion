@@ -269,6 +269,9 @@ class WifiGuardService : Service() {
                     )
                 }
                 GuardStateBus.syncRetryTelemetry()
+                if (effectiveStatus != previousStatus || reading.isConnected != prevTelemetry.isWifiConnected) {
+                    EltharionTileService.requestTileUpdate(applicationContext)
+                }
 
                 if (canAutoContactPortal) {
                     if (guardEngine.pauseStrikes == 1 && reading.rssiDbm != null) {

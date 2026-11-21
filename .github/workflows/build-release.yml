@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       version_tag:
-        description: 'Release version tag (e.g. v1.0.0)'
+        description: 'Release version tag (e.g. v1.1.0)'
         required: true
-        default: 'v1.0.0'
+        default: 'v1.1.0'
         type: string
   push:
     branches:
@@ -26,10 +26,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Create debug keystore
+      - name: Prepare consistent signing keystore
         shell: bash
         run: |
-          if [ ! -f "debug.keystore" ]; then
+          if [ ! -f "debug.keystore" ] && [ -f "debug.keystore.base64" ]; then
+            base64 -d debug.keystore.base64 > debug.keystore
+          elif [ ! -f "debug.keystore" ]; then
             keytool -genkeypair \
               -keystore debug.keystore \
               -storepass android \
@@ -53,18 +55,15 @@ jobs:
           elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
             TAG="${GITHUB_REF_NAME}"
           else
-            TAG="v1.0.0"
+            TAG="dev-${GITHUB_SHA::7}"
           fi
           echo "RELEASE_TAG=${TAG}" >> "$GITHUB_ENV"
           mkdir -p dist
 
-          if [ -f "release/eltharion-v1.0.0.apk" ]; then
-            echo "Using pre-built signed APK from release/eltharion-v1.0.0.apk"
-            cp "release/eltharion-v1.0.0.apk" "dist/eltharion-${TAG}.apk"
-          elif [ -f "app/build/outputs/apk/debug/app-debug.apk" ]; then
+          if [ -f "app/build/outputs/apk/debug/app-debug.apk" ]; then
             cp "app/build/outputs/apk/debug/app-debug.apk" "dist/eltharion-${TAG}.apk"
           else
-            echo "No pre-built APK found in release/eltharion-v1.0.0.apk"
+            echo "Compiled APK not found at app/build/outputs/apk/debug/app-debug.apk"
             exit 1
           fi
 
@@ -75,6 +74,7 @@ jobs:
           path: dist/eltharion-${{ env.RELEASE_TAG }}.apk
 
       - name: Publish or Update GitHub Release
+        if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash

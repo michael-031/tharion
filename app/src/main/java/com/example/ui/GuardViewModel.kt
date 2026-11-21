@@ -398,8 +398,10 @@ class GuardViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun testPause() {
-        if (GuardStateBus.telemetry.value.isGuardRunning && localSimGuardJob?.isActive != true) {
-            GuardStateBus.appendLog("Manual Test Pause requested...", LogLevel.INFO)
+        val telemetry = GuardStateBus.telemetry.value
+        if (!telemetry.isWifiConnected || !telemetry.isGuardRunning) return
+        if (localSimGuardJob?.isActive != true) {
+            GuardStateBus.appendLog("Manual Pause requested...", LogLevel.INFO)
             val intent = Intent(appContext, WifiGuardService::class.java).apply {
                 action = WifiGuardService.ACTION_MANUAL_PAUSE
             }
@@ -410,8 +412,10 @@ class GuardViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun testResume() {
-        if (GuardStateBus.telemetry.value.isGuardRunning && localSimGuardJob?.isActive != true) {
-            GuardStateBus.appendLog("Manual Test Resume requested...", LogLevel.INFO)
+        val telemetry = GuardStateBus.telemetry.value
+        if (!telemetry.isWifiConnected || !telemetry.isGuardRunning) return
+        if (localSimGuardJob?.isActive != true) {
+            GuardStateBus.appendLog("Manual Resume requested...", LogLevel.INFO)
             val intent = Intent(appContext, WifiGuardService::class.java).apply {
                 action = WifiGuardService.ACTION_MANUAL_RESUME
             }

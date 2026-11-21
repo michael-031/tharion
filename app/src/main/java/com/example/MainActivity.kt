@@ -118,7 +118,7 @@ class MainActivity : ComponentActivity() {
                     onOpenOemAutostart = ::openOemAutostartSettings,
                     onSendBatteryGuideNotification = viewModel::sendBatteryOptimizationGuide,
                     onStartGuard = {
-                        if (!uiState.hasLocationPermission && !uiState.simulation.enabled) {
+                        if (!uiState.hasLocationPermission) {
                             requestRequiredPermissions()
                         } else {
                             viewModel.startGuardService()
@@ -132,16 +132,10 @@ class MainActivity : ComponentActivity() {
                     onAdjustResumeThreshold = viewModel::adjustResumeThreshold,
                     onToggleAutoResume = viewModel::toggleAutoResume,
                     onToggleWebViewFallback = viewModel::toggleWebViewFallback,
-                    onToggleSimpleMode = viewModel::toggleSimpleMode,
-                    onToggleSimulationMode = viewModel::toggleSimulationMode,
-                    onSetSimulatedRssi = viewModel::setSimulatedRssi,
-                    onToggleSimulateUnreachable = viewModel::toggleSimulateUnreachablePortal,
                     onRetryPortalNow = viewModel::retryPortalNow,
-                    onFastForwardExpiry = viewModel::fastForwardExpiryForTest,
                     onUpdatePortalUrl = viewModel::updatePortalUrl,
                     onUpdateExpiryMinutes = viewModel::updateExpiryMinutes,
-                    onClearLogs = viewModel::clearLogs,
-                    onResetMonthlySavings = viewModel::resetMonthlySavings
+                    onClearLogs = viewModel::clearLogs
                 )
             }
         }

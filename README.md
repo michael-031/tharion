@@ -1,6 +1,6 @@
 # Eltharion
 
-**Eltharion** is an open-source Android app (Kotlin + Jetpack Compose) that protects your paid **Piso WiFi** (`http://10.0.0.1`) and compatible captive-portal WiFi minutes automatically. It monitors live WiFi signal strength (RSSI) in the background, pauses your session when you walk out of range, alerts you before paused time expires, and tracks every minute saved strictly on your device.
+**Eltharion** is an open-source Android app (Kotlin + Jetpack Compose) focused purely on automatically pausing your paid **Piso WiFi** (`http://10.0.0.1`) session when you walk out of range. It monitors live WiFi signal strength (RSSI) in the background, pauses your session automatically, and alerts you before paused time expires—strictly on your device with zero cloud uploads or accounts.
 
 ---
 
@@ -10,11 +10,9 @@
 - **Dual-Method Portal Automation:** Supports fast WiFi-bound HTTP + HTML link parsing (**Method A**) and a hidden `1x1` `WebView` DOM click fallback (**Method B**) targeting `http://10.0.0.1` (configurable for other captive portals).
 - **Smart Retry Exponential Backoff:** Automatically backs off (`4s → 8s → 16s → 32s → 64s → 120s` cap) when `10.0.0.1` is unreachable so failed background requests never drain your battery.
 - **Pause Countdown & 5-Min Expiry Alert:** Tracks remaining pause allowance and sends a high-priority notification + double vibration 5 minutes before paused time expires.
+- **Clean 2-Tab Interface:** Focused strictly on **Home** (live signal gauge, one-tap Guard toggle, manual Pause/Resume, and unified Settings) and **Activity** (recent pause/resume logs).
 - **Quick Settings Centaur Tile:** Toggle Eltharion protection on or off directly from Android's swipe-down Quick Settings shade without opening the app.
-- **Simple Mode:** Hides charts, logs, and advanced controls to display only connection status, a large signal gauge, and a prominent **Pause / Resume WiFi Time** button.
 - **Battery Optimization Helper:** Interactive per-brand checklists tailored for **Samsung (One UI)**, **Xiaomi / Redmi / POCO (HyperOS / MIUI)**, **OPPO / Realme (ColorOS)**, **Vivo / iQOO**, and **Pixel / Stock Android** with direct shortcuts to system battery settings.
-- **Monthly Time-Saved Tracker & 60s Trend Chart:** Displays real paused time saved per month and a 60-second RSSI line chart stored strictly in local DataStore and device memory—zero cloud uploads or accounts.
-- **Offline Practice Mode:** Test auto-pause thresholds, 5-minute expiry alerts, and unreachable-portal Smart Retry backoff safely with a pretend signal slider.
 
 ---
 
@@ -22,7 +20,7 @@
 
 ### Option 1: Install the Pre-Built APK (Recommended for Users)
 
-1. Download **[`eltharion-v1.0.0.apk`](./release/eltharion-v1.0.0.apk)** directly from the [`release/`](./release) folder (or from the repository's **Releases** page on the right sidebar) onto your Android phone (Android 7.0+ / API 24 or higher).
+1. Open the repository's **Releases** page on GitHub (**Releases → Latest**) and download the latest `eltharion-*.apk` onto your Android phone (Android 7.0+ / API 24 or higher).
 2. Tap the downloaded `.apk` file in your browser or **Files** app.
 3. If prompted, allow **Install unknown apps** for your browser/file manager, then tap **Install**.
 
